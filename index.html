@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Loterias</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent: #00e676;
+            --accent-hover: #00c853;
+            --danger: #ff5252;
+            --virada: #ffab00;
+            /* Gold for Mega da Virada */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+
+        /* Layout */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+
+        /* Panels */
+        .panel {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+        }
+
+        select,
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+            width: auto;
+        }
+
+        /* Number Grid Selection */
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .grid-num {
+            background-color: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .grid-num.selected {
+            background-color: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        /* Registered Tickets List */
+        .tickets-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ticket-card {
+            background-color: #252525;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #444;
+            transition: transform 0.3s ease, border-color 0.3s;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .ticket-title {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .ticket-game-type {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ticket-numbers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .ticket-num {
+            background-color: #333;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .ticket-num.hit {
+            background-color: var(--accent);
+            color: #000;
+            box-shadow: 0 0 10px var(--accent);
+            transform: scale(1.2);
+            font-weight: bold;
+            border: 2px solid white;
+        }
+
+        .match-count {
+            background: #333;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .match-count.winner {
+            background-color: var(--virada);
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Draw Area */
+        .draw-area {
+            background: #252525;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+
+        .drawn-numbers-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .drawn-num {
+            width: 45px;
+            height: 45px;
+            background-color: var(--accent);
+            color: #000;
+            font-weight: bold;
+            font-size: 1.2em;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0);
+            }
+
+            80% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Toast Styles */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            transform: translateY(100px);
+            transition: transform 0.3s;
+            z-index: 2500;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .toast.error {
+            background-color: var(--danger);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid #444;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modalTitle">Confirmação</h3>
+            <p id="modalMessage">Tem certeza?</p>
+            <div class="modal-actions">
+                <button class="btn-primary" id="btnConfirm" style="width: auto;">Sim</button>
+                <button class="btn-danger" id="btnCancel" style="width: auto; background-color: #555;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <header style="text-align: center; margin-bottom: 30px;">
+        <h1>🎰 Gerenciador de Loterias</h1>
+        <p style="color: var(--text-secondary);">Cadastre seus volantes e confira o sorteio em tempo real</p>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar / Registration & Controls -->
+        <aside class="panel">
+            <h2>Novo Jogo</h2>
+
+            <div class="form-group">
+                <label>Modalidade</label>
+                <select id="gameType" onchange="updateFormRules()">
+                    <option value="megasena">Mega-Sena</option>
+                    <option value="lotofacil">Lotofácil</option>
+                    <option value="quina">Quina</option>
+                    <option value="lotomania">Lotomania</option>
+                    <option value="timemania">Timemania</option>
+                    <option value="diadesorte">Dia de Sorte</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Identificação (Opccional)</label>
+                <input type="text" id="ticketName" placeholder="Ex: Bolão da Firma">
+            </div>
+
+            <div class="form-group">
+                <label>Quantidade de Dezenas</label>
+                <select id="numberQuantity" onchange="renderGrid()">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Selecione os Números: <span id="selectionCount">0</span></label>
+                <div id="gridSelection" class="number-grid">
+                    <!-- Grid generated by JS -->
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="addTicket()">Salvar Bilhete</button>
+            <br><br>
+            <div style="border-top: 1px solid #444; padding-top: 20px;">
+                <button class="btn-danger" style="width:100%" onclick="clearAllData()">Limpar Tudo (Reset)</button>
+            </div>
+        </aside>
+
+        <!-- Main Content / Tickets & Draw -->
+        <main class="panel">
+            <div class="draw-area">
+                <h2>Conferência (Sorteio)</h2>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="drawInput" placeholder="Nº Sorteado" style="max-width: 150px;">
+                    <button class="btn-primary" style="width: auto;" onclick="addDrawnNumber()">Adicionar</button>
+                    <button class="btn-danger" style="width: auto; background-color: #444;"
+                        onclick="resetDraw()">Reiniciar Sorteio</button>
+                </div>
+                <div id="drawnNumbersList" class="drawn-numbers-display">
+                    <!-- Drawn numbers appear here -->
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>Bilhetes Cadastrados (<span id="totalTickets">0</span>)</h3>
+                <div>
+                    Filtro: <select id="filterType" onchange="renderTickets()" style="width: auto; padding: 5px;">
+                        <option value="all">Todas</option>
+                        <option value="megasena">Mega-Sena</option>
+                        <option value="lotofacil">Lotofácil</option>
+                        <option value="quina">Quina</option>
+                        <option value="lotomania">Lotomania</option>
+                        <option value="timemania">Timemania</option>
+                        <option value="diadesorte">Dia de Sorte</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="ticketsContainer" class="tickets-list">
+                <!-- Tickets will be rendered here -->
+                <p style="text-align: center; color: #555; margin-top: 50px;">Nenhum bilhete cadastrado.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION ---
+        const GAMES = {
+            megasena: { name: "Mega-Sena", min: 6, max: 20, range: 60, start: 1, color: "#209869" },
+            lotofacil: { name: "Lotofácil", min: 15, max: 20, range: 25, start: 1, color: "#930089" },
+            quina: { name: "Quina", min: 5, max: 15, range: 80, start: 1, color: "#260085" },
+            lotomania: { name: "Lotomania", min: 50, max: 50, range: 100, start: 0, color: "#f78100", label00: true }, // Special case for 00
+            timemania: { name: "Timemania", min: 10, max: 10, range: 80, start: 1, color: "#00ff48" }, // Brand color is yellowish green
+            diadesorte: { name: "Dia de Sorte", min: 7, max: 15, range: 31, start: 1, color: "#cb852b" }
+        };
+
+        // --- 2. STATE ---
+        let state = {
+            tickets: [],
+            drawnNumbers: [],
+            currentSelection: new Set()
+        };
+
+        // --- 3. INIT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            updateFormRules();
+            renderTickets();
+            renderDrawnNumbers();
+
+            // Allow enter key in draw input
+            document.getElementById('drawInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') addDrawnNumber();
+            });
+        });
+
+        // --- 4. CORE LOGIC ---
+
+        function updateFormRules() {
+            const gameKey = document.getElementById('gameType').value;
+            const rules = GAMES[gameKey];
+
+            // Update Quantity Select
+            const qtySelect = document.getElementById('numberQuantity');
+            qtySelect.innerHTML = '';
+            for (let i = rules.min; i <= rules.max; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = i + (i === rules.min ? " (Mínimo)" : "");
+                qtySelect.appendChild(opt);
+            }
+
+            // Clear current selection
+            state.currentSelection.clear();
+            renderGrid();
+        }
+
+        function renderGrid() {
+            const gameKey = document.getElementById('gameType').value;
+            const rules = GAMES[gameKey];
+            const maxSelection = parseInt(document.getElementById('numberQuantity').value);
+            const gridContainer = document.getElementById('gridSelection');
+
+            gridContainer.innerHTML = '';
+            document.getElementById('selectionCount').textContent = `${state.currentSelection.size} / ${maxSelection}`;
+
+            const start = rules.start;
+            const end = rules.start === 0 ? 99 : rules.range; // For Lotomania (0-99) or regular (1-range)
+
+            for (let i = start; i <= end; i++) {
+                const btn = document.createElement('div');
+                let numStr = i.toString().padStart(2, '0');
+                if (rules.label00 && i === 0) numStr = "00"; // Lotomania legacy style often uses 00, but logic considers value 0
+
+                btn.className = `grid-num ${state.currentSelection.has(i) ? 'selected' : ''}`;
+                btn.textContent = numStr;
+                btn.onclick = () => toggleNumberSelection(i, maxSelection);
+                gridContainer.appendChild(btn);
+            }
+        }
+
+        function toggleNumberSelection(num, max) {
+            if (state.currentSelection.has(num)) {
+                state.currentSelection.delete(num);
+            } else {
+                if (state.currentSelection.size >= max) {
+                    showToast(`Máximo de ${max} números atingido!`, 'error');
+                    return;
+                }
+                state.currentSelection.add(num);
+            }
+            renderGrid();
+        }
+
+        function addTicket() {
+            const gameKey = document.getElementById('gameType').value;
+            const requiredQty = parseInt(document.getElementById('numberQuantity').value);
+            const name = document.getElementById('ticketName').value.trim() || `Jogo de ${GAMES[gameKey].name}`;
+
+            if (state.currentSelection.size !== requiredQty) {
+                showToast(`Selecione exatamente ${requiredQty} dezenas!`, 'error');
+                return;
+            }
+
+            const newTicket = {
+                id: Date.now(),
+                game: gameKey,
+                name: name,
+                numbers: Array.from(state.currentSelection).sort((a, b) => a - b),
+                matches: 0
+            };
+
+            state.tickets.push(newTicket);
+            saveState();
+
+            // Reset selection but keep game config
+            state.currentSelection.clear();
+            document.getElementById('ticketName').value = '';
+            renderGrid();
+            renderTickets();
+            showToast("Bilhete salvo com sucesso!");
+        }
+
+        // MODAL LOGIC
+        let pendingAction = null;
+
+        function showConfirm(title, message, action) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('confirmModal').classList.add('open');
+            pendingAction = action;
+
+            document.getElementById('btnConfirm').onclick = () => {
+                if (pendingAction) pendingAction();
+                closeModal();
+            };
+            document.getElementById('btnCancel').onclick = closeModal;
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('open');
+            pendingAction = null;
+        }
+
+        function deleteTicket(id) {
+            showConfirm("Excluir Bilhete", "Deseja realmente remover este bilhete?", () => {
+                state.tickets = state.tickets.filter(t => t.id !== id);
+                saveState();
+                renderTickets();
+                showToast("Bilhete removido.");
+            });
+        }
+
+        // --- 5. DRAW & CHECKING LOGIC ---
+
+        function addDrawnNumber() {
+            const input = document.getElementById('drawInput');
+            const val = parseInt(input.value);
+
+            if (isNaN(val)) return;
+
+            // Simple validation check, though different games have different ranges,
+            // the draw is global conceptually in this UI or user clears for next game.
+            // Let's just allow it but check duplicate.
+            if (state.drawnNumbers.includes(val)) {
+                showToast(`Número ${val} já sorteado!`, 'error');
+                input.value = '';
+                return;
+            }
+
+            state.drawnNumbers.push(val);
+            input.value = '';
+
+            saveState();
+            renderDrawnNumbers();
+            recalcAndSort();
+        }
+
+        function resetDraw() {
+            showConfirm("Reiniciar Sorteio", "Os números sorteados serão limpos, mas os bilhetes continuarão salvos.", () => {
+                state.drawnNumbers = [];
+                saveState();
+                renderDrawnNumbers();
+                recalcAndSort();
+                showToast("Sorteio reiniciado.");
+            });
+        }
+
+        function recalcAndSort() {
+            // Recalculate matches for all tickets
+            state.tickets.forEach(ticket => {
+                const hits = ticket.numbers.filter(n => state.drawnNumbers.includes(n));
+                ticket.matches = hits.length;
+            });
+
+            // Sort logic: 
+            // 1. More matches first
+            // 2. Tie breaker: ID (newer first)
+            state.tickets.sort((a, b) => {
+                if (b.matches !== a.matches) return b.matches - a.matches;
+                return b.id - a.id;
+            });
+
+            renderTickets();
+        }
+
+        // --- 6. RENDERING ---
+
+        function renderTickets() {
+            const container = document.getElementById('ticketsContainer');
+            const countSpan = document.getElementById('totalTickets');
+            const filter = document.getElementById('filterType').value;
+
+            container.innerHTML = '';
+
+            const filteredTickets = filter === 'all'
+                ? state.tickets
+                : state.tickets.filter(t => t.game === filter);
+
+            countSpan.textContent = filteredTickets.length;
+
+            if (filteredTickets.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #555; margin-top: 50px;">Nenhum bilhete encontrado.</p>';
+                return;
+            }
+
+            filteredTickets.forEach((ticket, index) => {
+                const gameCfg = GAMES[ticket.game];
+
+                const card = document.createElement('div');
+                card.className = 'ticket-card';
+                card.style.borderColor = gameCfg.color;
+
+                // Header
+                const header = document.createElement('div');
+                header.className = 'ticket-header';
+
+                const infoDiv = document.createElement('div');
+                infoDiv.innerHTML = `<div class="ticket-title">${ticket.name} <span class="match-count ${ticket.matches > 0 ? 'winner' : ''}">${ticket.matches} Acertos</span></div>
+                                     <div class="ticket-game-type" style="color:${gameCfg.color}">${gameCfg.name}</div>`;
+
+                const btnDel = document.createElement('button');
+                btnDel.className = 'btn-danger';
+                btnDel.textContent = 'X';
+                btnDel.onclick = () => deleteTicket(ticket.id);
+
+                header.appendChild(infoDiv);
+                header.appendChild(btnDel);
+                card.appendChild(header);
+
+                // Numbers
+                const numContainer = document.createElement('div');
+                numContainer.className = 'ticket-numbers';
+
+                ticket.numbers.forEach(num => {
+                    const el = document.createElement('div');
+                    el.className = 'ticket-num';
+                    el.textContent = num.toString().padStart(2, '0');
+                    if (state.drawnNumbers.includes(num)) {
+                        el.classList.add('hit');
+                        el.style.backgroundColor = gameCfg.color; // tint with game color
+                    }
+                    numContainer.appendChild(el);
+                });
+                card.appendChild(numContainer);
+
+                // Animation for reorder (simple fade in)
+                card.style.animation = `popIn 0.3s ease forwards`;
+                card.style.animationDelay = `${index * 0.05}s`;
+
+                container.appendChild(card);
+            });
+        }
+
+        function renderDrawnNumbers() {
+            const container = document.getElementById('drawnNumbersList');
+            container.innerHTML = '';
+            state.drawnNumbers.forEach(n => {
+                const el = document.createElement('div');
+                el.className = 'drawn-num';
+                el.textContent = n.toString().padStart(2, '0');
+                container.appendChild(el);
+            });
+        }
+
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `toast show ${type}`;
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
+
+        // --- 7. STORAGE ---
+        function saveState() {
+            localStorage.setItem('loterias_app_data', JSON.stringify({
+                tickets: state.tickets,
+                drawnNumbers: state.drawnNumbers
+            }));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('loterias_app_data');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state.tickets = parsed.tickets || [];
+                state.drawnNumbers = parsed.drawnNumbers || [];
+            }
+        }
+
+        function clearAllData() {
+            showConfirm("Limpar Tudo", "Isso apagará TODOS os bilhetes e dados salvos. Não há como desfazer.", () => {
+                localStorage.removeItem('loterias_app_data');
+                state.tickets = [];
+                state.drawnNumbers = [];
+                state.currentSelection.clear();
+
+                // Clear inputs
+                document.getElementById('ticketName').value = '';
+                document.getElementById('drawInput').value = '';
+
+                renderTickets();
+                renderDrawnNumbers();
+                renderGrid();
+                showToast("Sistema resetado com sucesso.");
+            });
+        }
+    </script>
+</body>
+
+</html>
