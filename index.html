@@ -320,6 +320,91 @@
             margin-top: 20px;
             justify-content: center;
         }
+
+        /* ... existing styles ... */
+
+        /* Winner Styles */
+        .ticket-card.win-max {
+            border: 2px solid #ffd700;
+            /* Gold */
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            background: linear-gradient(145deg, #2a2a2a 0%, #3e3820 100%);
+        }
+
+        .ticket-card.win-high {
+            border: 2px solid #c0c0c0;
+            /* Silver */
+            box-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
+        }
+
+        .ticket-card.win-mid {
+            border: 2px solid #cd7f32;
+            /* Bronze */
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 10px;
+            color: #000;
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .badge-max {
+            background-color: #ffd700;
+            box-shadow: 0 0 10px #ffd700;
+        }
+
+        .badge-high {
+            background-color: #c0c0c0;
+        }
+
+        .badge-mid {
+            background-color: #cd7f32;
+            color: white;
+        }
+
+        .badge-low {
+            background-color: #444;
+            color: white;
+            border: 1px solid #666;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Neon Effect for drawing input */
+        #drawInput:focus {
+            box-shadow: 0 0 15px var(--accent);
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        /* Improved Hit Style */
+        .ticket-num.hit {
+            background-color: var(--accent);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent);
+            transform: scale(1.15);
+            font-weight: 800;
+            border: 2px solid #fff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
     </style>
 </head>
 
@@ -382,6 +467,22 @@
 
             <button class="btn-primary" onclick="addTicket()">Salvar Bilhete</button>
             <br><br>
+
+            <div
+                style="background: #252525; padding: 10px; border-radius: 6px; border: 1px dashed #555; margin-bottom: 20px;">
+                <label style="font-size: 0.9em; cursor: pointer;">📄 Importar PDF (Simples)</label>
+                <input type="file" id="pdfUpload" accept="application/pdf" onchange="handlePdfUpload(event)"
+                    style="font-size: 0.8em; margin-top: 5px;">
+                <div id="pdfStatus" style="font-size: 0.8em; color: var(--accent); margin-top: 5px;"></div>
+
+                <hr style="border-color: #444; margin: 10px 0;">
+
+                <button class="btn-primary" style="background-color: #444; font-size: 0.9em;"
+                    onclick="openImportModal()">
+                    📥 Importação Avançada (CSV)
+                </button>
+            </div>
+
             <div style="border-top: 1px solid #444; padding-top: 20px;">
                 <button class="btn-danger" style="width:100%" onclick="clearAllData()">Limpar Tudo (Reset)</button>
             </div>
@@ -426,13 +527,66 @@
 
     <script>
         // --- 1. CONFIGURATION ---
+        // Prize Levels: 'max' (confetti + gold), 'high' (silver/virada), 'mid' (bronze/simple)
         const GAMES = {
-            megasena: { name: "Mega-Sena", min: 6, max: 20, range: 60, start: 1, color: "#209869" },
-            lotofacil: { name: "Lotofácil", min: 15, max: 20, range: 25, start: 1, color: "#930089" },
-            quina: { name: "Quina", min: 5, max: 15, range: 80, start: 1, color: "#260085" },
-            lotomania: { name: "Lotomania", min: 50, max: 50, range: 100, start: 0, color: "#f78100", label00: true }, // Special case for 00
-            timemania: { name: "Timemania", min: 10, max: 10, range: 80, start: 1, color: "#00ff48" }, // Brand color is yellowish green
-            diadesorte: { name: "Dia de Sorte", min: 7, max: 15, range: 31, start: 1, color: "#cb852b" }
+            megasena: {
+                name: "Mega-Sena", min: 6, max: 20, range: 60, start: 1, color: "#209869",
+                prizes: {
+                    6: { name: "SENA - PRÊMIO MÁXIMO", level: "max" },
+                    5: { name: "Quina", level: "high" },
+                    4: { name: "Quadra", level: "mid" }
+                }
+            },
+            lotofacil: {
+                name: "Lotofácil", min: 15, max: 20, range: 25, start: 1, color: "#930089",
+                prizes: {
+                    15: { name: "15 ACERTOS - MÁXIMO", level: "max" },
+                    14: { name: "14 Acertos", level: "high" },
+                    13: { name: "13 Acertos", level: "mid" },
+                    12: { name: "12 Acertos", level: "low" },
+                    11: { name: "11 Acertos", level: "low" }
+                }
+            },
+            quina: {
+                name: "Quina", min: 5, max: 15, range: 80, start: 1, color: "#260085",
+                prizes: {
+                    5: { name: "QUINA - MÁXIMO", level: "max" },
+                    4: { name: "Quadra", level: "high" },
+                    3: { name: "Terno", level: "mid" },
+                    2: { name: "Duque", level: "low" }
+                }
+            },
+            lotomania: {
+                name: "Lotomania", min: 50, max: 50, range: 100, start: 0, color: "#f78100", label00: true,
+                prizes: {
+                    20: { name: "20 ACERTOS - MÁXIMO", level: "max" },
+                    19: { name: "19 Acertos", level: "high" },
+                    18: { name: "18 Acertos", level: "mid" },
+                    17: { name: "17 Acertos", level: "mid" },
+                    16: { name: "16 Acertos", level: "low" },
+                    15: { name: "15 Acertos", level: "low" },
+                    0: { name: "0 ACERTOS - ESPELHO", level: "max" } // Espelho rule
+                }
+            },
+            timemania: {
+                name: "Timemania", min: 10, max: 10, range: 80, start: 1, color: "#00ff48",
+                prizes: {
+                    7: { name: "7 ACERTOS - MÁXIMO", level: "max" },
+                    6: { name: "6 Acertos", level: "high" },
+                    5: { name: "5 Acertos", level: "mid" },
+                    4: { name: "4 Acertos", level: "low" },
+                    3: { name: "3 Acertos", level: "low" }
+                }
+            },
+            diadesorte: {
+                name: "Dia de Sorte", min: 7, max: 15, range: 31, start: 1, color: "#cb852b",
+                prizes: {
+                    7: { name: "7 ACERTOS - MÁXIMO", level: "max" },
+                    6: { name: "6 Acertos", level: "high" },
+                    5: { name: "5 Acertos", level: "mid" },
+                    4: { name: "4 Acertos", level: "low" }
+                }
+            }
         };
 
         // --- 2. STATE ---
@@ -608,21 +762,53 @@
         }
 
         function recalcAndSort() {
-            // Recalculate matches for all tickets
+            let maxWinTriggered = false;
+
+            // Recalculate matches and prizes
             state.tickets.forEach(ticket => {
-                const hits = ticket.numbers.filter(n => state.drawnNumbers.includes(n));
-                ticket.matches = hits.length;
+                const rules = GAMES[ticket.game];
+                const hits = ticket.numbers.filter(n => state.drawnNumbers.includes(n)).length;
+                ticket.matches = hits;
+
+                // Determine Prize
+                ticket.prize = null;
+                if (rules.prizes && rules.prizes[hits]) {
+                    ticket.prize = rules.prizes[hits];
+                    if (ticket.prize.level === 'max') maxWinTriggered = true;
+                }
             });
 
             // Sort logic: 
-            // 1. More matches first
-            // 2. Tie breaker: ID (newer first)
+            // 1. Prize Level Priority (max > high > mid > low > null)
+            // 2. Match count
+            // 3. ID (Newest first)
+
+            const levelWeight = { max: 4, high: 3, mid: 2, low: 1 };
+
             state.tickets.sort((a, b) => {
+                const levelA = a.prize ? (levelWeight[a.prize.level] || 0) : 0;
+                const levelB = b.prize ? (levelWeight[b.prize.level] || 0) : 0;
+
+                if (levelB !== levelA) return levelB - levelA;
                 if (b.matches !== a.matches) return b.matches - a.matches;
                 return b.id - a.id;
             });
 
             renderTickets();
+
+            if (maxWinTriggered) {
+                triggerConfetti();
+            }
+        }
+
+        function triggerConfetti() {
+            // Simple confetti burst
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ffd700', '#00e676', '#ffffff'] // Gold, Green, White
+            });
         }
 
         // --- 6. RENDERING ---
@@ -650,14 +836,29 @@
 
                 const card = document.createElement('div');
                 card.className = 'ticket-card';
-                card.style.borderColor = gameCfg.color;
+                // Apply Winner Class
+                if (ticket.prize) {
+                    card.classList.add(`win-${ticket.prize.level}`);
+                } else {
+                    card.style.borderColor = gameCfg.color;
+                }
 
                 // Header
                 const header = document.createElement('div');
                 header.className = 'ticket-header';
 
+                // Construct Badge if won
+                let badgeHtml = '';
+                if (ticket.prize) {
+                    badgeHtml = `<span class="badge badge-${ticket.prize.level}">${ticket.prize.name}</span>`;
+                }
+
                 const infoDiv = document.createElement('div');
-                infoDiv.innerHTML = `<div class="ticket-title">${ticket.name} <span class="match-count ${ticket.matches > 0 ? 'winner' : ''}">${ticket.matches} Acertos</span></div>
+                infoDiv.innerHTML = `<div class="ticket-title">
+                                        ${ticket.name} 
+                                        <span class="match-count ${ticket.matches > 0 ? 'winner' : ''}">${ticket.matches} Acertos</span>
+                                        ${badgeHtml}
+                                     </div>
                                      <div class="ticket-game-type" style="color:${gameCfg.color}">${gameCfg.name}</div>`;
 
                 const btnDel = document.createElement('button');
@@ -679,15 +880,18 @@
                     el.textContent = num.toString().padStart(2, '0');
                     if (state.drawnNumbers.includes(num)) {
                         el.classList.add('hit');
-                        el.style.backgroundColor = gameCfg.color; // tint with game color
+                        // Keep specific color if not overall winner style, or force contrast?
+                        // Winner styles have dark backgrounds, so neon green fits well.
+                        if (!ticket.prize) el.style.backgroundColor = gameCfg.color;
                     }
                     numContainer.appendChild(el);
                 });
                 card.appendChild(numContainer);
 
-                // Animation for reorder (simple fade in)
+                // Reorder Animation
                 card.style.animation = `popIn 0.3s ease forwards`;
-                card.style.animationDelay = `${index * 0.05}s`;
+                // Stagger delay slightly for list effect
+                card.style.animationDelay = `${Math.min(index * 0.05, 0.5)}s`;
 
                 container.appendChild(card);
             });
@@ -747,7 +951,306 @@
                 showToast("Sistema resetado com sucesso.");
             });
         }
+
+        // --- 8. PDF IMPORT (REFINED) ---
+        async function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                showToast('Por favor, selecione um arquivo PDF.', 'error');
+                return;
+            }
+
+            const statusParams = document.getElementById('pdfStatus');
+            statusParams.textContent = "Lendo arquivo...";
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                let fullTextLines = [];
+
+                statusParams.textContent = `Processando ${pdf.numPages} páginas...`;
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+
+                    let lastY;
+                    let pageLines = [];
+                    let currentLine = "";
+
+                    // Sort items by Y descending (top to bottom)
+                    textContent.items.sort((a, b) => {
+                        if (Math.abs(a.transform[5] - b.transform[5]) > 4) {
+                            return b.transform[5] - a.transform[5];
+                        }
+                        return a.transform[4] - b.transform[4];
+                    });
+
+                    textContent.items.forEach(item => {
+                        if (lastY !== undefined && Math.abs(item.transform[5] - lastY) > 5) {
+                            pageLines.push(currentLine);
+                            currentLine = "";
+                        }
+                        currentLine += " " + item.str;
+                        lastY = item.transform[5];
+                    });
+                    if (currentLine) pageLines.push(currentLine);
+
+                    fullTextLines = fullTextLines.concat(pageLines);
+                }
+
+                statusParams.textContent = "Analisando dados...";
+                processPdfLines(fullTextLines);
+                statusParams.textContent = "";
+                event.target.value = "";
+
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao ler PDF.", "error");
+                statusParams.textContent = "Erro.";
+            }
+        }
+
+        function processPdfLines(lines) {
+            // 1. Detect Game Type
+            const headerText = lines.slice(0, 20).join(" ").toUpperCase();
+            let detectedGame = null;
+
+            const keyMap = {
+                "MEGA-SENA": "megasena", "MEGA DA VIRADA": "megasena",
+                "LOTOFÁCIL": "lotofacil", "LOTOFACIL": "lotofacil",
+                "QUINA": "quina",
+                "LOTOMANIA": "lotomania",
+                "TIMEMANIA": "timemania",
+                "DIA DE SORTE": "diadesorte"
+            };
+
+            for (const [key, value] of Object.entries(keyMap)) {
+                if (headerText.includes(key)) {
+                    detectedGame = value;
+                    break;
+                }
+            }
+
+            const selectEl = document.getElementById('gameType');
+            if (detectedGame && selectEl.value !== detectedGame) {
+                if (confirm(`Detectamos "${GAMES[detectedGame].name}" no PDF. Deseja mudar para essa modalidade?`)) {
+                    selectEl.value = detectedGame;
+                    updateFormRules();
+                }
+            }
+
+            const gameKey = selectEl.value;
+            const rules = GAMES[gameKey];
+
+            let importCount = 0;
+
+            // 2. Process Lines
+            lines.forEach(line => {
+                const rawNumbers = line.match(/\b\d{1,2}\b/g);
+                if (!rawNumbers) return;
+
+                let numbers = rawNumbers.map(n => parseInt(n));
+
+                const validNumbers = numbers.filter(n => {
+                    if (gameKey === 'lotomania' && n === 0) return true;
+                    return n >= rules.start && n <= rules.range;
+                });
+
+                const unique = [...new Set(validNumbers)];
+
+                // Allow strict variable quantity: must be at least min game size
+                if (unique.length < rules.min || unique.length > 50) return;
+
+                const newTicket = {
+                    id: Date.now() + Math.random(),
+                    game: gameKey,
+                    name: `Importado (PDF)`,
+                    numbers: unique.sort((a, b) => a - b),
+                    matches: 0
+                };
+
+                state.tickets.push(newTicket);
+                importCount++;
+            });
+
+            if (importCount > 0) {
+                saveState();
+                renderTickets();
+                showToast(`${importCount} bilhetes importados!`);
+            } else {
+                showToast("Nenhum bilhete encontrado. Verifique se o arquivo é válido.", "error");
+            }
+        }
     </script>
+
+    <!-- Advanced Import Modal -->
+    <div id="importModal" class="modal-overlay">
+        <div class="modal" style="max-width: 600px;">
+            <h3>Importação Avançada</h3>
+            <p style="font-size: 0.9em; color: var(--text-secondary);">
+                Cole os dados do PDF ou envie um arquivo CSV/TXT.
+                <br><em>Formato: "ID", "COTA", "NÚMEROS..."</em>
+            </p>
+
+            <textarea id="importText" rows="10" placeholder="Cole aqui os dados..."
+                style="width: 100%; background: #2c2c2c; color: white; border: 1px solid #444; border-radius: 6px; padding: 10px; font-family: monospace;"></textarea>
+
+            <div style="margin-top: 10px; text-align: left;">
+                <label style="font-size: 0.9em;">Ou carregue arquivo:</label>
+                <input type="file" id="advancedFile" accept=".csv, .txt" onchange="loadAdvancedFile(event)"
+                    style="font-size: 0.9em;">
+            </div>
+
+            <div id="importPreview"
+                style="margin-top: 15px; font-size: 0.9em; color: var(--accent); white-space: pre-wrap; display: none;">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="processAdvancedImport()">Processar e Salvar</button>
+                <button class="btn-danger" style="background-color: #555;"
+                    onclick="closeImportModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 9. ADVANCED IMPORT LOGIC ---
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('open');
+            document.getElementById('importText').value = '';
+            document.getElementById('importPreview').style.display = 'none';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('open');
+        }
+
+        function loadAdvancedFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('importText').value = e.target.result;
+                generatePreview();
+            };
+            reader.readAsText(file);
+        }
+
+        // Real-time preview generator
+        document.getElementById('importText').addEventListener('keyup', generatePreview);
+
+        function generatePreview() {
+            const text = document.getElementById('importText').value;
+            if (!text.trim()) return;
+
+            const results = parseLegacyFormat(text, true); // dry run
+            const previewEl = document.getElementById('importPreview');
+
+            if (results.count > 0) {
+                previewEl.textContent = `✅ Reconhecidos ${results.groups} Bilhetes contendo um total de ${results.count} jogos válidos.`;
+                previewEl.style.color = 'var(--accent)';
+                previewEl.style.display = 'block';
+            } else {
+                previewEl.textContent = `⚠️ Nenhum jogo válido identificado. Verifique o formato.`;
+                previewEl.style.color = 'var(--virada)';
+                previewEl.style.display = 'block';
+            }
+        }
+
+        function processAdvancedImport() {
+            const text = document.getElementById('importText').value;
+            if (!text.trim()) {
+                showToast("Cole os dados ou carregue um arquivo.", "error");
+                return;
+            }
+
+            const results = parseLegacyFormat(text, false); // committed run
+
+            if (results.count > 0) {
+                saveState();
+                renderTickets();
+                showToast(`${results.count} jogos importados com sucesso!`);
+                closeImportModal();
+            } else {
+                showToast("Falha na importação. Verifique o formato dos dados.", "error");
+            }
+        }
+
+        function parseLegacyFormat(text, dryRun) {
+            const gameKey = document.getElementById('gameType').value;
+            const rules = GAMES[gameKey];
+
+            const lines = text.split(/\r?\n/);
+            let currentTicketName = "Importado";
+            let addedCount = 0;
+            let groupCount = new Set();
+
+            lines.forEach(line => {
+                // Determine delimiter
+                if (!line.trim()) return;
+
+                // Remove quotes globally
+                const cleanLine = line.replace(/"/g, '');
+                const cols = cleanLine.split(/,|;|\t/);
+
+                // Logic: Col 0 = ID. If present, update group name.
+                if (cols[0] && cols[0].trim()) {
+                    currentTicketName = `Bilhete ${cols[0].trim()}`;
+                    groupCount.add(currentTicketName);
+                }
+
+                // Numbers start at Col 2 (0=ID, 1=Cota, 2=First Num)
+                const potentialNumbers = cols.slice(2);
+
+                const nums = [];
+                potentialNumbers.forEach(val => {
+                    const cleanVal = val.replace(/[^\d]/g, '');
+                    if (cleanVal) {
+                        const n = parseInt(cleanVal, 10);
+                        if (!isNaN(n)) nums.push(n);
+                    }
+                });
+
+                // Validate Numbers
+                const validNums = nums.filter(n => {
+                    if (gameKey === 'lotomania' && n === 0) return true;
+                    return n >= rules.start && n <= rules.range;
+                });
+
+                const unique = [...new Set(validNums)];
+
+                // Check min constraints
+                if (unique.length >= rules.min) {
+                    if (!dryRun) {
+                        state.tickets.push({
+                            id: Date.now() + Math.random(),
+                            game: gameKey,
+                            name: currentTicketName,
+                            numbers: unique.sort((a, b) => a - b),
+                            matches: 0
+                        });
+                    }
+                    addedCount++;
+                }
+            });
+
+            return { count: addedCount, groups: groupCount.size };
+        }
+    </script>
+
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </body>
 
 </html>
